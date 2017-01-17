@@ -10,9 +10,19 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.dudaizhong.loadmorerecyclerview.R;
 import com.dudaizhong.loadmorerecyclerview.gif.PullRefreshLayout;
+import com.dudaizhong.loadmorerecyclerview.refresh.RefreshLayout;
+
+import in.srain.cube.views.ptr.PtrDefaultHandler;
+import in.srain.cube.views.ptr.PtrFrameLayout;
+import rx.Observable;
+import rx.Scheduler;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.schedulers.Schedulers;
 
 /**
  * Created by Dudaizhong on 2016/10/9.
@@ -20,38 +30,57 @@ import com.dudaizhong.loadmorerecyclerview.gif.PullRefreshLayout;
 
 public class PullRefreshLayoutActivity extends AppCompatActivity {
 
-    PullRefreshLayout layout;
-
+    //    PullRefreshLayout layout;
+    RecyclerView mRecyclerView;
+    RefreshLayout mRefreshLayout;
     private int i = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_recycler_view);
+        setContentView(R.layout.activity_refresh);
+        initView();
+    }
 
-        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recyclerView);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+    private void initView() {
+        mRecyclerView = (RecyclerView) findViewById(R.id.recyclerView);
+        mRefreshLayout = (RefreshLayout) findViewById(R.id.swipeRefreshLayout);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         String[] array = new String[50];
         for (int i = 0; i < array.length; i++) {
             array[i] = "string " + i;
         }
-        recyclerView.setAdapter(new ArrayAdapter(this, array));
-
-        layout = (PullRefreshLayout) findViewById(R.id.swipeRefreshLayout);
-
-        layout.setRefreshStyle(4);
-        layout.setOnRefreshListener(new PullRefreshLayout.OnRefreshListener() {
+        mRecyclerView.setAdapter(new ArrayAdapter(this, array));
+        mRefreshLayout.setPtrHandler(new PtrDefaultHandler() {
             @Override
-            public void onRefresh() {
-                layout.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        layout.setRefreshing(false);
-                    }
-                }, 4000);
+            public void onRefreshBegin(PtrFrameLayout frame) {
+                refreshData();
             }
         });
+    }
+
+    private void refreshData() {
+        Observable.just(1)
+                .doOnNext(new Action1<Integer>() {
+                    @Override
+                    public void call(Integer integer) {
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Action1<Integer>() {
+                    @Override
+                    public void call(Integer integer) {
+                        Toast.makeText(PullRefreshLayoutActivity.this, "更新数据", Toast.LENGTH_SHORT).show();
+                        mRefreshLayout.refreshComplete();
+                    }
+                });
     }
 
     static class ArrayAdapter extends RecyclerView.Adapter<ViewHolder> {
